@@ -11,12 +11,12 @@ porosidad=0.2;
 coef_curva_ret=2;
 z0=-1.0;%Posición comienzo horizonte poros gruesos
 Ks=4e-5;%Conductividad hidráulica en saturación
-coef_curva_conduc=3;
+coef_curva_conduc=5;
 
 Dz=-0.01;
 z=0:Dz:z0;%A efectos de estabilidad, si se reduce el intervalo de z, hay que reducir también el de t
-Dt=0.05;
-tfinal=500;
+Dt=0.5;
+tfinal=3600;
 nintervtiempo=floor(tfinal/Dt);
 
 
@@ -36,7 +36,7 @@ K(1,:)=Ks.*exp(coef_curva_conduc.*h(1,:));%Perfil de conductividad hidráulica c
 %Cálculo de la velocidad
 uz(1,:)=-(K(1,1:end-1)+K(1,2:end))./2-(K(1,1:end-1)+K(1,2:end))./2.*(h(1,2:end)-h(1,1:end-1))./(hum(1,2:end)-hum(1,1:end-1)).*(hum(1,2:end)-hum(1,1:end-1))./(z(2:end)-z(1:end-1));
 
-subplot(1,3,1)
+subplot(2,2,1)
 plot(hum(1,:),z)
 hold on
 
@@ -45,7 +45,11 @@ tiempo(1)=0;
 for k=2:1:nintervtiempo
   tiempo(k)=tiempo(k-1)+Dt;
   %Condición de contorno
-  hum(k,1)=porosidad;
+  %if tiempo(k)<2000
+    hum(k,1)=porosidad;
+  %else
+  %  ;
+  %endif
   hum(k,end)=porosidad;
   
   %Cálculo de la humedad a partir de la divergencia de la velocidad
@@ -55,10 +59,10 @@ for k=2:1:nintervtiempo
   uz(k,:)=-(K(k,1:end-1)+K(k,2:end))./2-(K(k,1:end-1)+K(k,2:end))./2.*(h(k,2:end)-h(k,1:end-1))./(z(2:end)-z(1:end-1));
   
   %Representación de algunas curvas de perfil de humedad
-  if tiempo(k)<60 && (mod(k,10))==0
+  if tiempo(k)<60 && (mod(k,50))==0
     plot(hum(k,:),z)
     disp(tiempo(k));
-  elseif tiempo(k)>60 && (mod(k,100))==0
+  elseif tiempo(k)>60 && (mod(k,500))==0
     plot(hum(k,:),z)
     disp(tiempo(k));
   endif
@@ -69,25 +73,30 @@ xlabel('humedad')
 ylabel('z(m)')
 hold off
 
-ia(1)=0;
-for i=2:numel(uz(:,1))
-  ia(i)=ia(i-1)-uz(i,1)*Dt;
-endfor
+ia=-cumsum(uz(:,1));
+percol=-cumsum(uz(:,end));
 
-subplot(1,3,2)
+subplot(2,2,2)
 [ax,lines1,lines2]=plotyy(tiempo,-uz(:,1),tiempo,ia);
 xlabel('t(s)')
-ylabel(ax(1), 'infilt. instant. (m/s)','color','b')
-ylabel(ax(2), 'infilt. acum. (m)','color','r')
-set(ax(1),'Xlim',[0 500])
-set(ax(1),'Ylim',[0 0.001])
-set(ax(2),'Xlim',[0 500])
-set(ax(2),'Ylim',[0 0.05])
+ylabel(ax(1), 'infilt.instant.(m/s)','color','b')
+ylabel(ax(2), 'infilt.acum.(m)','color','r')
+set(ax(1),'Xlim',[0 tfinal])
+set(ax(1),'Ylim',[0 0.0002])
+set(ax(2),'Xlim',[0 tfinal])
+set(ax(2),'Ylim',[0 0.4])
 hold on
 plot([tiempo(1) tiempo(end)],[Ks Ks],'b--')
 hold off
 
-subplot(1,3,3)
-plot(tiempo,hum(:,1:10))
+subplot(2,2,3)
+plot(tiempo,hum(:,1:5:50))
 xlabel('t(s)')
 ylabel('humedad')
+
+subplot(2,2,4)
+plot(tiempo,ia)
+xlabel('t(s)')
+ylabel('infilt.acum., percolac.(m)')
+hold on
+plot(tiempo,percol)
